@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Asset Hub — API Guide</title>
+<meta name="description" content="How to work with the Asset Hub API: authentication, conventions, searching and generating assets, polling jobs, and the async generation flow." />
+<meta name="theme-color" content="#000000" />
+<meta property="og:title" content="Asset Hub — API Guide" />
+<meta property="og:description" content="How to work with the Asset Hub API — auth, conventions, generation and jobs." />
+<meta property="og:type" content="website" />
+
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='225 260 600 600'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='150' y1='210' x2='780' y2='210' gradientUnits='userSpaceOnUse'%3E%3Cstop offset='0%25' stop-color='%237a2cff'/%3E%3Cstop offset='25%25' stop-color='%238c7bff'/%3E%3Cstop offset='52%25' stop-color='%231ec8e8'/%3E%3Cstop offset='65%25' stop-color='%2346d17a'/%3E%3Cstop offset='78%25' stop-color='%23f0cf4c'/%3E%3Cstop offset='90%25' stop-color='%23ff9540'/%3E%3Cstop offset='100%25' stop-color='%23ff4338'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cg transform='translate(110,100) scale(0.9)'%3E%3Cpolygon fill='url(%23g)' points='150,810 370,210 500,210 280,810'/%3E%3Cpolygon fill='url(%23g)' points='430,210 650,810 780,810 560,210'/%3E%3C/g%3E%3C/svg%3E" />
+
+<style>
+  :root {
+    --bg: #000000; --surface: #0a0a0c; --surface-2: #101014;
+    --text: #f5f5f7; --dim: #a1a1a6; --faint: #6e6e73;
+    --hairline: rgba(255,255,255,0.09); --hairline-strong: rgba(255,255,255,0.16);
+    --accent: #4a9eff;
+    --grad: linear-gradient(100deg, #7a2cff 0%, #8c7bff 22%, #49a2ff 40%, #1ec8e8 54%, #46d17a 68%, #f0cf4c 80%, #ff9540 90%, #ff4338 100%);
+    --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    --maxw: 940px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; overflow-x: clip; }
+  body { background: var(--bg); color: var(--text); font-family: var(--font); -webkit-font-smoothing: antialiased; line-height: 1.55; overflow-x: hidden; }
+  ::selection { background: rgba(74,158,255,0.35); }
+  a { color: inherit; text-decoration: none; }
+  .wrap { width: 100%; max-width: var(--maxw); margin: 0 auto; padding: 0 24px; }
+
+  nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; height: 52px; display: flex; align-items: center;
+    background: rgba(0,0,0,0.6); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px);
+    border-bottom: 1px solid transparent; transition: border-color .3s; }
+  nav.scrolled { border-bottom-color: var(--hairline); }
+  nav .wrap { display: flex; align-items: center; justify-content: space-between; }
+  nav .logo svg { height: 19px; width: auto; display: block; }
+  .nav-links { display: flex; align-items: center; gap: 24px; }
+  .nav-links a { font-size: 13px; color: var(--dim); transition: color .2s; }
+  .nav-links a:hover { color: var(--text); }
+  .nav-links a.ghlink { color: var(--text); font-weight: 500; }
+  @media (max-width: 560px) { .nav-links a.backlink { display: none; } }
+
+  header.hero { position: relative; padding: 148px 0 26px; overflow: hidden; }
+  .hero-glow { position: absolute; top: -35%; left: 12%; width: 680px; height: 680px; max-width: 120vw;
+    background: radial-gradient(circle, rgba(74,158,255,0.14) 0%, rgba(122,44,255,0.06) 45%, transparent 70%); filter: blur(20px); pointer-events: none; }
+  .eyebrow { position: relative; z-index: 2; font-size: 13px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase;
+    background: var(--grad); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent; }
+  h1 { position: relative; z-index: 2; font-size: clamp(34px, 6vw, 58px); line-height: 1.05; font-weight: 700; letter-spacing: -0.03em; margin: 20px 0 0; }
+  .lede { position: relative; z-index: 2; color: var(--dim); font-size: clamp(16px, 2.1vw, 20px); max-width: 62ch; margin: 22px 0 0; }
+
+  .toc { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 30px; position: relative; z-index: 2; }
+  .toc a { font-size: 13px; color: var(--dim); border: 1px solid var(--hairline-strong); border-radius: 999px; padding: 7px 14px; transition: color .2s, border-color .2s, background .2s; }
+  .toc a:hover { color: var(--text); border-color: var(--accent); background: rgba(74,158,255,0.08); }
+
+  main { padding: 26px 0 20px; }
+  section.doc { padding: 40px 0; border-top: 1px solid var(--hairline); scroll-margin-top: 70px; }
+  section.doc h2 { font-size: clamp(21px, 3vw, 28px); font-weight: 700; letter-spacing: -0.02em; }
+  section.doc h3 { font-size: 16px; font-weight: 600; margin: 26px 0 0; }
+  section.doc p { color: var(--dim); font-size: 15.5px; margin-top: 12px; max-width: 70ch; }
+  section.doc ul { margin: 14px 0 0; padding-left: 0; list-style: none; display: flex; flex-direction: column; gap: 10px; }
+  section.doc li { position: relative; padding-left: 20px; color: var(--dim); font-size: 15px; line-height: 1.55; max-width: 74ch; }
+  section.doc li::before { content: ""; position: absolute; left: 3px; top: 9px; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+  section.doc li b { color: var(--text); font-weight: 600; }
+
+  pre { margin: 18px 0 0; background: var(--surface-2); border: 1px solid var(--hairline); border-radius: 12px;
+    padding: 18px 20px; overflow-x: auto; font-family: var(--mono); font-size: 13px; line-height: 1.65; color: #cfd2da; }
+  pre .c { color: var(--faint); }        /* comment */
+  pre .m { color: #7fe0a3; font-weight: 600; } /* method */
+  pre .a { color: #6fb2ff; }             /* arrow / path accent */
+  code { font-family: var(--mono); font-size: .875em; background: var(--surface-2); border: 1px solid var(--hairline); border-radius: 5px; padding: 1px 6px; color: #b7c6ff; }
+  pre code { background: none; border: 0; padding: 0; color: inherit; }
+
+  .callout { margin: 20px 0 0; padding: 20px 22px; border: 1px solid var(--hairline-strong); border-radius: 14px; background: var(--surface); font-size: 14.5px; color: var(--dim); }
+  .callout b { color: var(--text); }
+  .callout a { color: #6fb2ff; font-weight: 600; }
+
+  footer { border-top: 1px solid var(--hairline); margin-top: 40px; padding: 40px 0 70px; }
+  footer .wrap { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 18px; }
+  footer .logo svg { height: 16px; opacity: .85; display: block; }
+  .foot-note { font-size: 12.5px; color: var(--faint); width: 100%; }
+  .foot-note a { color: var(--dim); }
+
+  .reveal { opacity: 0; transform: translateY(18px); transition: opacity .7s cubic-bezier(.2,.7,.2,1), transform .7s cubic-bezier(.2,.7,.2,1); }
+  .reveal.in { opacity: 1; transform: none; }
+  @media (prefers-reduced-motion: reduce) { .reveal { opacity: 1; transform: none; transition: none; } html { scroll-behavior: auto; } }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <linearGradient id="ah-grad" x1="150" y1="210" x2="780" y2="210" gradientUnits="userSpaceOnUse">
+    <stop offset="0%" stop-color="#7a2cff" /><stop offset="10%" stop-color="#b07cff" /><stop offset="25%" stop-color="#8c7bff" /><stop offset="40%" stop-color="#49a2ff" /><stop offset="52%" stop-color="#1ec8e8" /><stop offset="65%" stop-color="#46d17a" /><stop offset="78%" stop-color="#f0cf4c" /><stop offset="90%" stop-color="#ff9540" /><stop offset="100%" stop-color="#ff4338" />
+  </linearGradient>
+</defs></svg>
+
+<nav id="nav">
+  <div class="wrap">
+    <a class="logo" href="index.html" aria-label="Asset Hub home">
+      <svg viewBox="320 360 3230 545" fill="none" aria-label="ASSET HUB"><g transform="translate(200,200) scale(0.85)"><polygon fill="url(#ah-grad)" points="150,810 370,210 500,210 280,810" /><polygon fill="url(#ah-grad)" points="430,210 650,810 780,810 560,210" /></g><text x="880" y="820" font-family="Arial, Helvetica, sans-serif" font-size="500" font-weight="700" letter-spacing="16" fill="#f5f5f7">SSET HUB</text></svg>
+    </a>
+    <div class="nav-links">
+      <a class="backlink" href="index.html">← Home</a>
+      <a href="security.html">Security</a>
+      <a class="ghlink" href="https://github.com/AI-Asset-Hub" target="_blank" rel="noopener">GitHub&nbsp;↗</a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="hero-glow"></div>
+  <div class="wrap">
+    <div class="eyebrow reveal">API Guide</div>
+    <h1 class="reveal">Working with the API</h1>
+    <p class="lede reveal">Everything Asset Hub does in the UI is a REST call you can make yourself — search your library, kick off generations, poll jobs, manage sets. This is the friendly overview; the machine-readable contract is the OpenAPI schema your instance serves.</p>
+    <div class="toc reveal">
+      <a href="#base">Base URL</a>
+      <a href="#conventions">Conventions</a>
+      <a href="#auth">Authentication</a>
+      <a href="#search">Search &amp; items</a>
+      <a href="#generate">Generation</a>
+      <a href="#jobs">Jobs</a>
+      <a href="#sets">Sets &amp; collections</a>
+      <a href="#errors">Errors</a>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section class="doc reveal" id="base">
+    <h2>Base URL</h2>
+    <p>All endpoints live under <code>/api/v1</code> on your own instance. The OpenAPI schema is the source of truth — if this guide and the schema ever disagree, the schema wins.</p>
+<pre><span class="c"># local — through the UI's nginx</span>
+http://localhost:3000/api/v1
+<span class="c"># local — backend direct</span>
+http://localhost:8000/api/v1
+<span class="c"># production</span>
+https://&lt;your-host&gt;/api/v1
+
+<span class="c"># the machine-readable contract (no token needed):</span>
+GET /api/v1/openapi.json
+<span class="c"># interactive Swagger UI:</span>
+/api/v1/docs</pre>
+    <div class="callout"><b>Tip:</b> point your generated client or <code>curl</code> at <code>openapi.json</code> — it always matches the version you're actually running.</div>
+  </section>
+
+  <section class="doc reveal" id="conventions">
+    <h2>Conventions</h2>
+    <ul>
+      <li>Everything is under <code>/api/v1</code>; only <code>GET /health</code> is unversioned, for infra probes.</li>
+      <li>Authenticate with <b><code>Authorization: Bearer &lt;token&gt;</code></b> — a JWT access token <i>or</i> an API key (<code>ah_…</code>).</li>
+      <li>Payloads go in the JSON body, never the query string. List responses are always an <code>{"items": [...]}</code> envelope.</li>
+      <li>Errors follow RFC 9457 <code>application/problem+json</code>: <code>{type, title, status, detail}</code> (plus <code>errors</code> on validation failures).</li>
+      <li>Generation is asynchronous: you get <b><code>202 Accepted</code></b> + a <code>Location: /api/v1/jobs/{job_id}</code> header, then poll the job.</li>
+      <li>Create → <code>201</code>, delete → <code>204</code>, someone else's resource → <code>403</code>, state conflict → <code>409</code>.</li>
+    </ul>
+  </section>
+
+  <section class="doc reveal" id="auth">
+    <h2>Authentication</h2>
+    <p>Log in for a token pair, then send the access token on every request. The first registered user becomes an activated admin; everyone else needs admin approval.</p>
+<pre><span class="m">POST</span> /auth/login        {"email","password"}   <span class="a">→</span> {access_token, refresh_token}
+<span class="m">POST</span> /auth/refresh      {"refresh_token"}      <span class="a">→</span> new token pair
+<span class="m">GET</span>  /auth/me                                  <span class="a">→</span> UserResponse
+
+<span class="c"># then, on every request:</span>
+Authorization: Bearer &lt;access_token&gt;</pre>
+    <h3>API keys (for machine clients)</h3>
+    <p>For scripts or integrations (e.g. a Unity plugin), create a long-lived API key and use it exactly like a bearer token. The plaintext key is shown <b>once</b>.</p>
+<pre><span class="m">POST</span>   /auth/api-keys     {"name"}   <span class="a">→</span> 201 {key: "ah_…"}   <span class="c"># copy it now</span>
+<span class="m">GET</span>    /auth/api-keys                <span class="a">→</span> {"items": [...]}
+<span class="m">DELETE</span> /auth/api-keys/{key_id}       <span class="a">→</span> 204</pre>
+    <div class="callout"><b>SSO:</b> with OIDC enabled, <code>GET /auth/oidc/login</code> starts the flow; set the IdP redirect URI to <code>{PUBLIC_URL}/api/v1/auth/oidc/callback</code>.</div>
+  </section>
+
+  <section class="doc reveal" id="search">
+    <h2>Search &amp; items</h2>
+    <p>Hybrid search combines keyword (pg_trgm) and semantic (vector) matching, fused and paginated. Image URLs come back as short-lived signed links that work directly in an <code>&lt;img&gt;</code> without a token.</p>
+<pre><span class="m">GET</span> /items/search?q=chair&amp;limit=60&amp;offset=0&amp;asset_filter=image,3d
+    <span class="a">→</span> {"items": [ItemSummary], "limit", "offset", "has_more"}
+
+<span class="m">GET</span>    /items/{id}              <span class="a">→</span> ItemDetail (files, jobs, signed URLs)
+<span class="m">GET</span>    /items/{id}/similar      <span class="a">→</span> {"items": [...]}   <span class="c"># embedding neighbours</span>
+<span class="m">PATCH</span>  /items/{id}              <span class="c"># edit allowed fields</span>   <span class="a">→</span> {"status":"ok"}
+<span class="m">DELETE</span> /items/{id}              <span class="a">→</span> 204
+<span class="m">POST</span>   /items/{id}/tags         {"tags":["chair"]}   <span class="a">→</span> 201 {"tags":[...]}</pre>
+    <ul>
+      <li><b><code>limit</code></b> 1–200, <b><code>sort</code></b> ∈ <code>date-asc | name-asc | name-desc</code> (newest first by default; with <code>q</code>, relevance wins).</li>
+      <li><b><code>asset_filter</code></b> — comma-separated modalities (<code>image,3d</code>); <b><code>item_type</code></b> — origin facet (<code>generated | upload | …</code>).</li>
+    </ul>
+  </section>
+
+  <section class="doc reveal" id="generate">
+    <h2>Generation</h2>
+    <p>All generation is asynchronous and returns a job to poll. Send a prompt, pick a model/provider, optionally spread the work across several providers at once with <code>distribution</code> — every result lands in one Set for side-by-side comparison.</p>
+<pre><span class="m">POST</span> /items/generate         GenerateRequest (prompt, generator_model, provider?, distribution?)
+<span class="m">POST</span> /items/generate-upload  <span class="c"># multipart: files + prompt/category/provider…</span>
+
+    <span class="a">→</span> 202 Accepted   Location: /api/v1/jobs/{job_id}
+       JobInfo {job_id, status:"QUEUED", generation_mode, item_id, service}
+
+<span class="c"># race several providers — one Set, results side by side:</span>
+{"distribution": {"comfyui": 2, "meshy": 1}}   <span class="a">→</span> + {group_id, job_ids}</pre>
+    <h3>Derive from an existing asset</h3>
+    <p>Derive actions never mutate the source — each result is a new item in the source's Set.</p>
+<pre><span class="m">POST</span> /items/{id}/image-to-3d      {"provider"?, "distribution"?, "workflow_filename"?}
+<span class="m">POST</span> /items/{id}/reimagine        {"prompt"?, "provider"?, …}
+<span class="m">POST</span> /items/{id}/image-to-video   {"prompt"?, "duration_seconds"?, …}
+<span class="m">POST</span> /items/{id}/retexture        {"prompt"?, "provider"?, …}
+
+<span class="c"># operate on many at once:</span>
+<span class="m">POST</span> /items/bulk-generate         {"item_ids", "target":"3d"|"image"|"video"}   <span class="a">→</span> 202</pre>
+  </section>
+
+  <section class="doc reveal" id="jobs">
+    <h2>Jobs</h2>
+    <p>After a <code>202</code>, poll the job until it reaches a terminal state. Active jobs report their queue position; finished ones carry timing, progress and any error.</p>
+<pre><span class="m">GET</span>  /jobs?limit=50        <span class="a">→</span> {"items": [JobInfo]}   <span class="c"># queue_position while active</span>
+<span class="m">GET</span>  /jobs/{job_id}        <span class="a">→</span> JobInfo (progress, stage, error_message, timestamps)
+<span class="m">POST</span> /jobs/{job_id}/retry  <span class="c"># re-queue a FAILED / CANCELED job</span>
+<span class="m">POST</span> /jobs/{job_id}/cancel <span class="c"># 409 once it's already at the provider</span></pre>
+    <div class="callout">The lifecycle: <code>QUEUED → IN_PROGRESS → SUCCEEDED</code> (preview → final), then the LLM auto-enriches metadata. On failure the item exposes a <code>failed_job_id</code> so the UI can offer a retry.</div>
+  </section>
+
+  <section class="doc reveal" id="sets">
+    <h2>Sets &amp; collections</h2>
+    <p><b>Sets</b> (groups) bundle related items — e.g. every variant from a race. <b>Collections</b> are the named tiles in the library sidebar.</p>
+<pre><span class="m">GET</span>  /groups                     <span class="a">→</span> {"items": [{id, name, member_count, modalities}]}
+<span class="m">POST</span> /groups                     {"name", "item_ids"?}   <span class="a">→</span> 201
+<span class="m">POST</span> /groups/{id}/bulk-generate  {"target":"3d", …}      <span class="a">→</span> 202
+
+<span class="m">GET</span>  /collections                <span class="a">→</span> {"items": [tiles]}
+<span class="m">PUT</span>  /collections                {"collections":[tiles]}   <span class="c"># full replace, order = list</span></pre>
+  </section>
+
+  <section class="doc reveal" id="errors">
+    <h2>Errors</h2>
+    <p>Every error is <code>application/problem+json</code> — a predictable shape you can branch on.</p>
+<pre><span class="m">GET</span> /api/v1/items/999999
+    <span class="a">→</span> 404   Content-Type: application/problem+json
+      {"type":"about:blank", "title":"Not Found",
+       "status":404, "detail":"Item not found"}
+
+<span class="c"># 401 additionally carries:  WWW-Authenticate: Bearer   (RFC 6750)</span></pre>
+    <div class="callout">This page is the guided tour. For the exhaustive, always-current reference, open <b>Swagger UI</b> at <code>/api/v1/docs</code> on your instance, or read <b>API.md</b> in the <a href="https://github.com/AI-Asset-Hub" target="_blank" rel="noopener">repository</a>.</div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <a class="logo" href="index.html" aria-label="Asset Hub">
+      <svg viewBox="320 360 3230 545" fill="none" aria-label="ASSET HUB"><g transform="translate(200,200) scale(0.85)"><polygon fill="url(#ah-grad)" points="150,810 370,210 500,210 280,810" /><polygon fill="url(#ah-grad)" points="430,210 650,810 780,810 560,210" /></g><text x="880" y="820" font-family="Arial, Helvetica, sans-serif" font-size="500" font-weight="700" letter-spacing="16" fill="#f5f5f7">SSET HUB</text></svg>
+    </a>
+    <div class="foot-note">API guide · the OpenAPI schema is the source of truth &nbsp;·&nbsp; <a href="index.html">← Back to home</a></div>
+  </div>
+</footer>
+
+<script>
+  var nav = document.getElementById('nav');
+  var onScroll = function () { nav.classList.toggle('scrolled', window.scrollY > 8); };
+  onScroll(); window.addEventListener('scroll', onScroll, { passive: true });
+  var reveals = document.querySelectorAll('.reveal');
+  if ('IntersectionObserver' in window) {
+    var io = new IntersectionObserver(function (es) { es.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }); }, { threshold: 0.08, rootMargin: '0px 0px -6% 0px' });
+    reveals.forEach(function (el) { io.observe(el); });
+  } else { reveals.forEach(function (el) { el.classList.add('in'); }); }
+</script>
+
+</body>
+</html>

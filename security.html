@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Asset Hub — Security</title>
+<meta name="description" content="How Asset Hub protects your data: per-user isolation, encrypted secrets, SSRF protection, revocable sessions, signed asset URLs, hardened containers and an automated security test suite." />
+<meta name="theme-color" content="#000000" />
+<meta property="og:title" content="Asset Hub — Security" />
+<meta property="og:description" content="How we secure Asset Hub — a hardened, self-hostable platform for AI-generated assets." />
+<meta property="og:type" content="website" />
+
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='225 260 600 600'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='150' y1='210' x2='780' y2='210' gradientUnits='userSpaceOnUse'%3E%3Cstop offset='0%25' stop-color='%237a2cff'/%3E%3Cstop offset='25%25' stop-color='%238c7bff'/%3E%3Cstop offset='52%25' stop-color='%231ec8e8'/%3E%3Cstop offset='65%25' stop-color='%2346d17a'/%3E%3Cstop offset='78%25' stop-color='%23f0cf4c'/%3E%3Cstop offset='90%25' stop-color='%23ff9540'/%3E%3Cstop offset='100%25' stop-color='%23ff4338'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cg transform='translate(110,100) scale(0.9)'%3E%3Cpolygon fill='url(%23g)' points='150,810 370,210 500,210 280,810'/%3E%3Cpolygon fill='url(%23g)' points='430,210 650,810 780,810 560,210'/%3E%3C/g%3E%3C/svg%3E" />
+
+<style>
+  :root {
+    --bg: #000000; --surface: #0a0a0c; --surface-2: #121216;
+    --text: #f5f5f7; --dim: #a1a1a6; --faint: #6e6e73;
+    --hairline: rgba(255,255,255,0.09); --hairline-strong: rgba(255,255,255,0.16);
+    --green: #46d17a; --green-soft: rgba(70,209,122,0.12); --green-line: rgba(70,209,122,0.28);
+    --grad: linear-gradient(100deg, #7a2cff 0%, #8c7bff 22%, #49a2ff 40%, #1ec8e8 54%, #46d17a 68%, #f0cf4c 80%, #ff9540 90%, #ff4338 100%);
+    --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --maxw: 1000px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; overflow-x: clip; }
+  body { background: var(--bg); color: var(--text); font-family: var(--font); -webkit-font-smoothing: antialiased; line-height: 1.5; overflow-x: hidden; }
+  ::selection { background: rgba(70,209,122,0.35); }
+  a { color: inherit; text-decoration: none; }
+  .wrap { width: 100%; max-width: var(--maxw); margin: 0 auto; padding: 0 24px; }
+
+  nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; height: 52px; display: flex; align-items: center;
+    background: rgba(0,0,0,0.6); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px);
+    border-bottom: 1px solid transparent; transition: border-color .3s; }
+  nav.scrolled { border-bottom-color: var(--hairline); }
+  nav .wrap { display: flex; align-items: center; justify-content: space-between; }
+  nav .logo svg { height: 19px; width: auto; display: block; }
+  .nav-links { display: flex; align-items: center; gap: 24px; }
+  .nav-links a { font-size: 13px; color: var(--dim); transition: color .2s; }
+  .nav-links a:hover { color: var(--text); }
+  .nav-links a.ghlink { color: var(--text); font-weight: 500; }
+  @media (max-width: 560px) { .nav-links a.backlink { display: none; } }
+
+  header.hero { position: relative; padding: 150px 0 30px; overflow: hidden; }
+  .hero-glow { position: absolute; top: -35%; left: 15%; width: 680px; height: 680px; max-width: 120vw;
+    background: radial-gradient(circle, rgba(70,209,122,0.14) 0%, rgba(30,200,232,0.06) 45%, transparent 70%); filter: blur(20px); pointer-events: none; }
+  .eyebrow { position: relative; z-index: 2; font-size: 13px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: var(--green); }
+  h1 { position: relative; z-index: 2; font-size: clamp(34px, 6vw, 60px); line-height: 1.05; font-weight: 700; letter-spacing: -0.03em; margin: 20px 0 0; max-width: 16ch; }
+  .lede { position: relative; z-index: 2; color: var(--dim); font-size: clamp(16px, 2.1vw, 20px); max-width: 60ch; margin: 24px 0 0; }
+  .pill-row { position: relative; z-index: 2; display: flex; flex-wrap: wrap; gap: 10px; margin-top: 30px; }
+  .pill { border: 1px solid var(--green-line); background: var(--green-soft); border-radius: 999px; padding: 7px 15px; font-size: 12.5px; color: #7fe0a3; font-weight: 500; }
+
+  main { padding: 40px 0 20px; }
+  .group { padding: 40px 0; border-top: 1px solid var(--hairline); }
+  .group:first-child { border-top: 0; }
+  .group h2 { font-size: clamp(22px, 3.2vw, 30px); font-weight: 700; letter-spacing: -0.02em; margin-bottom: 6px; }
+  .group .gsub { color: var(--faint); font-size: 15px; margin-bottom: 26px; }
+  .measures { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+  @media (max-width: 720px) { .measures { grid-template-columns: 1fr; } }
+  .m { display: flex; gap: 13px; padding: 20px; background: var(--surface); border: 1px solid var(--hairline); border-radius: 14px; }
+  .m .ic { flex-shrink: 0; width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; background: var(--green-soft); border: 1px solid var(--green-line); }
+  .m .ic svg { width: 16px; height: 16px; stroke: var(--green); }
+  .m h3 { font-size: 15px; font-weight: 600; }
+  .m p { font-size: 13.5px; color: var(--faint); margin-top: 5px; line-height: 1.5; }
+
+  .report { margin: 20px 0 0; padding: 30px; border: 1px solid var(--green-line); border-radius: 18px; background: linear-gradient(180deg, var(--green-soft), transparent); }
+  .report h2 { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; }
+  .report p { color: var(--dim); font-size: 15.5px; margin-top: 12px; max-width: 68ch; line-height: 1.6; }
+  .report a.link { color: #7fe0a3; font-weight: 600; }
+  .disclaimer { color: var(--faint); font-size: 12.5px; margin: 30px 0 0; line-height: 1.6; max-width: 72ch; }
+
+  footer { border-top: 1px solid var(--hairline); margin-top: 40px; padding: 40px 0 70px; }
+  footer .wrap { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 18px; }
+  footer .logo svg { height: 16px; opacity: .85; display: block; }
+  .foot-note { font-size: 12.5px; color: var(--faint); width: 100%; }
+
+  .reveal { opacity: 0; transform: translateY(20px); transition: opacity .7s cubic-bezier(.2,.7,.2,1), transform .7s cubic-bezier(.2,.7,.2,1); }
+  .reveal.in { opacity: 1; transform: none; }
+  @media (prefers-reduced-motion: reduce) { .reveal { opacity: 1; transform: none; transition: none; } html { scroll-behavior: auto; } }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <linearGradient id="ah-grad" x1="150" y1="210" x2="780" y2="210" gradientUnits="userSpaceOnUse">
+    <stop offset="0%" stop-color="#7a2cff" /><stop offset="10%" stop-color="#b07cff" /><stop offset="25%" stop-color="#8c7bff" /><stop offset="40%" stop-color="#49a2ff" /><stop offset="52%" stop-color="#1ec8e8" /><stop offset="65%" stop-color="#46d17a" /><stop offset="78%" stop-color="#f0cf4c" /><stop offset="90%" stop-color="#ff9540" /><stop offset="100%" stop-color="#ff4338" />
+  </linearGradient>
+</defs></svg>
+
+<nav id="nav">
+  <div class="wrap">
+    <a class="logo" href="index.html" aria-label="Asset Hub home">
+      <svg viewBox="320 360 3230 545" fill="none" aria-label="ASSET HUB"><g transform="translate(200,200) scale(0.85)"><polygon fill="url(#ah-grad)" points="150,810 370,210 500,210 280,810" /><polygon fill="url(#ah-grad)" points="430,210 650,810 780,810 560,210" /></g><text x="880" y="820" font-family="Arial, Helvetica, sans-serif" font-size="500" font-weight="700" letter-spacing="16" fill="#f5f5f7">SSET HUB</text></svg>
+    </a>
+    <div class="nav-links">
+      <a class="backlink" href="index.html">← Home</a>
+      <a href="api-guide.html">API</a>
+      <a class="ghlink" href="https://github.com/AI-Asset-Hub" target="_blank" rel="noopener">GitHub&nbsp;↗</a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="hero-glow"></div>
+  <div class="wrap">
+    <div class="eyebrow reveal">Security</div>
+    <h1 class="reveal">How we secure Asset Hub</h1>
+    <p class="lede reveal">Asset Hub is self-hosted: your prompts, assets and provider keys live on your own infrastructure, never ours. That only matters if the software itself is trustworthy — so it's hardened by default, reviewed end to end, and every protection is pinned by an automated test suite.</p>
+    <div class="pill-row reveal">
+      <span class="pill">Encrypted at rest</span>
+      <span class="pill">SSRF-guarded</span>
+      <span class="pill">Non-root containers</span>
+      <span class="pill">100+ security tests</span>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section class="group reveal">
+    <h2>Data &amp; access isolation</h2>
+    <p class="gsub">Your assets are yours — enforced on every request, not just in the UI.</p>
+    <div class="measures">
+      <div class="m"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 20a5.5 5.5 0 0 1 11 0"/><path d="M17 11l2 2 3-3"/></svg></div><div><h3>Per-user ownership</h3><p>Every asset, set and job is scoped to its owner. Cross-user access is rejected across items, groups and jobs — no reading another account's work by guessing an ID.</p></div></div>
+      <div class="m"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l6-4 6 4 6-4v14l-6 4-6-4-6 4z"/><path d="M9 3v14M15 7v14"/></svg></div><div><h3>Filesystem confinement</h3><p>Serving assets is confined to the storage root; path-traversal attempts can't escape it to reach other files on disk.</p></div></div>
+      <div class="m"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg></div><div><h3>Signed, expiring URLs</h3><p>Files and avatars are delivered through short-lived, HMAC-signed links backed by a dedicated signing key — never guessable public paths.</p></div></div>
+      <div class="m"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4v5c0 4.5-3.2 7.7-8 9-4.8-1.3-8-4.5-8-9V7z"/><path d="M9 12l2 2 4-4"/></svg></div><div><h3>Admin-gated operations</h3><p>Library scans, provider configuration and user management require admin — and admin status is re-read from the database on every request.</p></div></div>
+    </div>
+  </section>
+
+  <section class="group reveal">
+    <h2>Authentication &amp; sessions</h2>
+    <p class="gsub">Standard, revocable auth for both people and machines.</p>
+    <div class="measures">
+      <div class="m"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7a4 4 0 1 0-4 4M11 11l-7 7v3h3l1-1h2v-2h2l2-2"/></svg></div><div><h3>Tokens &amp; API keys</h3><p>JWT bearer tokens for the UI and revocable personal API keys for machine clients such as a Unity plugin.</p></div></div>
+      <div class="m"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/></svg></div><div><h3>Rotating, revocable sessions</h3><p>Refresh tokens rotate on use; logging out or changing a password revokes every active session, so a leaked token can be cut off.</p></div></div>
+      <div class="m"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div><div><h3>OIDC / SSO</h3><p>Standards-based single sign-on with one-time authorization-code exchange, <code>nonce</code> and <code>email_verified</code> checks; the JWT algorithm is pinned.</p></div></div>
+      <div class="m"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4v6h6M20 20v-6h-6"/><path d="M5 9a7 7 0 0 1 13-1M19 15a7 7 0 0 1-13 1"/></svg></div><div><h3>Brute-force protection</h3><p>A password policy plus rate limiting on login, registration and password changes. New accounts need explicit admin approval.</p></div></div>
+    </div>
+  </section>
+
+  <section class="group reveal">
+    <h2>Secrets &amp; configuration</h2>
+    <p class="gsub">Safe defaults, and it fails closed rather than running insecurely.</p>
+    <div class="measures">
+      <div class="m"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></div><div><h3>Provider keys encrypted at rest</h3><p>API keys entered in the admin UI are encrypted before they touch the database, with a dedicated encryption key.</p></div></div>
+      <div class="m"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg></div><div><h3>Fails closed on weak secrets</h3><p>The app refuses to start on the shipped default, an empty, or a too-short signing secret — it won't silently run in an insecure state.</p></div></div>
+      <div class="m"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="7" r="3"/><circle cx="17" cy="17" r="3"/><path d="M7 10v4a3 3 0 0 0 3 3h1M17 14v-4a3 3 0 0 0-3-3h-1"/></svg></div><div><h3>Separate keys per purpose</h3><p>Distinct secrets for session auth, secret encryption and asset-URL signing — a single leak doesn't cascade.</p></div></div>
+      <div class="m"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4v5c0 4.5-3.2 7.7-8 9-4.8-1.3-8-4.5-8-9V7z"/></svg></div><div><h3>Safe defaults</h3><p>Self-signup off by default, a trusted-host allowlist, an explicit CORS origin list, security headers, and generic errors that don't leak internals.</p></div></div>
+    </div>
+  </section>
+
+  <section class="group reveal">
+    <h2>Network &amp; infrastructure</h2>
+    <p class="gsub">Locked down at the edges and inside the containers.</p>
+    <div class="measures">
+      <div class="m"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg></div><div><h3>SSRF protection</h3><p>Every outbound request — to a provider or a reference image — is validated, and access to private and link-local networks is blocked by default.</p></div></div>
+      <div class="m"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01"/></svg></div><div><h3>No open inbound ports</h3><p>Production runs behind a reverse proxy and tunnel; the database and internal services are never directly exposed.</p></div></div>
+      <div class="m"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a4 4 0 0 1 4 4c0 1.5-.8 2.4-1.5 3M12 2a4 4 0 0 0-4 4c0 1.5.8 2.4 1.5 3M8 12h8M9 16h6M10 20h4"/></svg></div><div><h3>Non-root containers</h3><p>Services run as an unprivileged user with dropped Linux capabilities, <code>no-new-privileges</code> and process limits.</p></div></div>
+      <div class="m"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4v5c0 4.5-3.2 7.7-8 9-4.8-1.3-8-4.5-8-9V7z"/><path d="M12 8v8M8 12h8"/></svg></div><div><h3>Optional edge protection</h3><p>Deployment guidance includes bot- and abuse-mitigation at the edge for public-facing instances.</p></div></div>
+    </div>
+  </section>
+
+  <section class="group reveal">
+    <h2>Testing &amp; review</h2>
+    <p class="gsub">The guarantees above are verified, not just intended.</p>
+    <div class="measures">
+      <div class="m"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div><div><h3>Automated security suite</h3><p>100+ security-focused tests run in continuous integration and lock each protection in place, so a future change can't quietly regress it.</p></div></div>
+      <div class="m"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></div><div><h3>Reviewed end to end</h3><p>The codebase was put through a full security review and hardened across authentication, access control, file handling, secrets and infrastructure.</p></div></div>
+      <div class="m"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg></div><div><h3>Parameterized everywhere</h3><p>Database access uses bound parameters (no SQL injection) and subprocess calls use argument lists (no shell injection).</p></div></div>
+      <div class="m"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4v5c0 4.5-3.2 7.7-8 9-4.8-1.3-8-4.5-8-9V7z"/><path d="M9 12l2 2 4-4"/></svg></div><div><h3>Header/bearer auth</h3><p>Authentication rides on headers and bearer tokens rather than cookies, so there's no classic CSRF surface to exploit.</p></div></div>
+    </div>
+  </section>
+
+  <section class="reveal">
+    <div class="report">
+      <h2>Reporting a vulnerability</h2>
+      <p>Found a security issue? Please report it privately through
+        <a class="link" href="https://github.com/AI-Asset-Hub" target="_blank" rel="noopener">GitHub Security Advisories</a>
+        on the repository rather than opening a public issue. We'll acknowledge your report and work with you on a fix before any disclosure. Responsible reports are always welcome.</p>
+    </div>
+    <p class="disclaimer">Asset Hub is open-source software you run yourself. These measures describe the protections built into the project; the security of any given deployment also depends on how it's configured and operated (strong secrets, kept-updated hosts, a properly configured reverse proxy). See the project README and configuration notes for hardening guidance.</p>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <a class="logo" href="index.html" aria-label="Asset Hub">
+      <svg viewBox="320 360 3230 545" fill="none" aria-label="ASSET HUB"><g transform="translate(200,200) scale(0.85)"><polygon fill="url(#ah-grad)" points="150,810 370,210 500,210 280,810" /><polygon fill="url(#ah-grad)" points="430,210 650,810 780,810 560,210" /></g><text x="880" y="820" font-family="Arial, Helvetica, sans-serif" font-size="500" font-weight="700" letter-spacing="16" fill="#f5f5f7">SSET HUB</text></svg>
+    </a>
+    <div class="foot-note">Security-reviewed &amp; hardened by default &nbsp;·&nbsp; Self-hosted · Open source &nbsp;·&nbsp; <a href="index.html" style="color:var(--dim)">← Back to home</a></div>
+  </div>
+</footer>
+
+<script>
+  var nav = document.getElementById('nav');
+  var onScroll = function () { nav.classList.toggle('scrolled', window.scrollY > 8); };
+  onScroll(); window.addEventListener('scroll', onScroll, { passive: true });
+  var reveals = document.querySelectorAll('.reveal');
+  if ('IntersectionObserver' in window) {
+    var io = new IntersectionObserver(function (es) { es.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }); }, { threshold: 0.1, rootMargin: '0px 0px -6% 0px' });
+    reveals.forEach(function (el) { io.observe(el); });
+  } else { reveals.forEach(function (el) { el.classList.add('in'); }); }
+</script>
+
+</body>
+</html>
