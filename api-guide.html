@@ -40,7 +40,10 @@
   .nav-links a { font-size: 13px; color: var(--dim); transition: color .2s; }
   .nav-links a:hover { color: var(--text); }
   .nav-links a.ghlink { color: var(--text); font-weight: 500; }
-  @media (max-width: 560px) { .nav-links a.backlink { display: none; } }
+  .nav-links a[aria-current="page"] { color: var(--text); }
+  .nav-links .soon { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--faint); cursor: not-allowed; user-select: none; }
+  .nav-links .soon .tag { font-size: 9px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); border: 1px solid var(--hairline-strong); border-radius: 999px; padding: 2px 6px; line-height: 1; }
+  @media (max-width: 720px) { .nav-links a:not(.ghlink), .nav-links .soon { display: none; } }
 
   header.hero { position: relative; padding: 148px 0 26px; overflow: hidden; }
   .hero-glow { position: absolute; top: -35%; left: 12%; width: 680px; height: 680px; max-width: 120vw;
@@ -101,8 +104,14 @@
       <svg viewBox="320 360 3230 545" fill="none" aria-label="ASSET HUB"><g transform="translate(200,200) scale(0.85)"><polygon fill="url(#ah-grad)" points="150,810 370,210 500,210 280,810" /><polygon fill="url(#ah-grad)" points="430,210 650,810 780,810 560,210" /></g><text x="880" y="820" font-family="Arial, Helvetica, sans-serif" font-size="500" font-weight="700" letter-spacing="16" fill="#f5f5f7">SSET HUB</text></svg>
     </a>
     <div class="nav-links">
-      <a class="backlink" href="index.html">← Home</a>
+      <a href="index.html#vision">Vision</a>
+      <a href="index.html#capabilities">Capabilities</a>
+      <a href="index.html#features">Features</a>
+      <a href="index.html#roadmap">Roadmap</a>
       <a href="security.html">Security</a>
+      <a href="api-guide.html" aria-current="page">API</a>
+      <a href="walkthrough.html">Walkthrough</a>
+      <span class="soon" title="Live demo instance coming soon" aria-disabled="true">Demo <span class="tag">soon</span></span>
       <a class="ghlink" href="https://github.com/AI-Asset-Hub" target="_blank" rel="noopener">GitHub&nbsp;↗</a>
     </div>
   </div>
